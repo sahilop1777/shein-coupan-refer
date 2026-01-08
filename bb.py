@@ -1,16 +1,21 @@
+import os
 import telebot
 from telebot import types
 import sqlite3
 
-API_TOKEN = "7990432307:AAENMxxQF5Dufg7KV89PGNcjkOqk0LNz0Ts"
+# ---------------- CONFIG ----------------
+
+API_TOKEN = os.getenv("BOT_TOKEN")  # 🔐 Railway env var
 CHANNEL = "@channelforsellings"
 ADMIN_ID = 6416481890
 
 bot = telebot.TeleBot(API_TOKEN)
 
-# ---------------- DATABASE ----------------
+# ---------------- DATABASE (RAILWAY SAFE) ----------------
 
-db = sqlite3.connect("bot.db", check_same_thread=False)
+DB_PATH = "/data/bot.db"  # ✅ Railway volume path
+
+db = sqlite3.connect(DB_PATH, check_same_thread=False)
 cur = db.cursor()
 
 cur.execute("""
@@ -47,7 +52,8 @@ def joined(uid):
 
 def get_points(uid):
     cur.execute("SELECT points FROM users WHERE user_id=?", (uid,))
-    return cur.fetchone()[0]
+    row = cur.fetchone()
+    return row[0] if row else 0
 
 def add_points(uid, pts):
     cur.execute("UPDATE users SET points = points + ? WHERE user_id=?", (pts, uid))
@@ -69,7 +75,8 @@ def start(m):
         try:
             ref = int(args[1])
             cur.execute("SELECT referred_by FROM users WHERE user_id=?", (uid,))
-            if ref != uid and cur.fetchone()[0] is None:
+            row = cur.fetchone()
+            if ref != uid and row and row[0] is None:
                 cur.execute("UPDATE users SET referred_by=? WHERE user_id=?", (ref, uid))
                 db.commit()
         except:
@@ -98,9 +105,10 @@ def verify(c):
 
 def verify_success(uid, chat_id):
     cur.execute("SELECT referred_by FROM users WHERE user_id=?", (uid,))
-    ref = cur.fetchone()[0]
+    row = cur.fetchone()
 
-    if ref:
+    if row and row[0]:
+        ref = row[0]
         add_points(ref, 2)
         cur.execute("UPDATE users SET referred_by=NULL WHERE user_id=?", (uid,))
         db.commit()
@@ -232,7 +240,5 @@ def stock(m):
 
 # ---------------- RUN ----------------
 
-print("🤖 Bot Running on Railway")
+print("🤖 Bot Running on Railway (Polling Mode)")
 bot.infinity_polling(skip_pending=True)
-
-
