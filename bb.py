@@ -232,5 +232,7 @@ def stock(m):
 
 # ---------------- RUN ----------------
 
-print("🤖 Bot Running with DATABASE")
-bot.infinity_polling()
+print("🤖 Bot Running on Railway")
+bot.infinity_polling(skip_pending=True)
+
+
